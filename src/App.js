@@ -1,25 +1,73 @@
-import logo from './logo.svg';
+
+import React, { useState, useEffect } from 'react';
+import SearchBar from './SerachBar';
+import MovieList from './MovieList';
+import MovieModal from './MovieModel';
 import './App.css';
 
-function App() {
+const App = () => {
+  const [query, setQuery] = useState('');
+  const [movies, setMovies] = useState([]);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [error, setError] = useState(null);
+
+  const fetchMovies = async (searchQuery) => {
+    try {
+      const response = await fetch(`http://www.omdbapi.com/?apikey=fbaa95d0&s=${searchQuery}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.Response === 'True') {
+        setMovies(data.Search);
+      } else {
+        console.error('Error from OMDB API:', data.Error);
+        setError(data.Error);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError('An error occurred while fetching data.');
+    }
+  };
+
+  useEffect(() => {
+    fetchMovies('popular');
+  }, []);
+
+  const handleSearch = () => {
+    if (query) {
+      setError(null);
+      fetchMovies(query);
+    }
+  };
+
+  const fetchMovieDetails = async (movieId) => {
+    try {
+      const response = await fetch(`http://www.omdbapi.com/?apikey=fbaa95d0&i=${movieId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.Response === 'True') {
+        setSelectedMovie(data);
+      } else {
+        console.error('Error from OMDB API:', data.Error);
+        setError(data.Error);
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError('An error occurred while fetching movie details.');
+    }
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <SearchBar query={query} setQuery={setQuery} onSearch={handleSearch} />
+      {error && <div className="error-message">{error}</div>}
+      <MovieList movies={movies} onSelect={(movie) => fetchMovieDetails(movie.imdbID)} />
+      {selectedMovie && <MovieModal movie={selectedMovie} onClose={() => setSelectedMovie(null)} />}
     </div>
   );
-}
+};
 
 export default App;
